@@ -25,7 +25,8 @@ final class ErrorHandlerTest extends TestCase
 
         $response = ErrorHandler::render(new RuntimeException('database password leaked'), 'test-correlation');
 
-        self::assertSame(false, $response['success']);
+        self::assertSame(false, $response['status']);
+        self::assertArrayNotHasKey('success', $response);
         self::assertSame('Internal Server Error', $response['message']);
         self::assertSame('test-correlation', $response['correlation_id']);
         self::assertArrayNotHasKey('exception', $response);

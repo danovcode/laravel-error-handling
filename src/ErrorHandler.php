@@ -58,7 +58,7 @@ final class ErrorHandler
     {
         $correlationId ??= self::correlationId();
         $response = [
-            'success' => false,
+            'status' => false,
             'message' => self::publicMessage($exception),
             'correlation_id' => $correlationId,
         ];

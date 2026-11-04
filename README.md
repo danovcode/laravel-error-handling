@@ -22,7 +22,7 @@ ErrorHandler::register([
 ]);
 ```
 
-The global exception and PHP error handlers emit a JSON response with `success`, `message`, and `correlation_id`. In production, unexpected exception messages and traces are never included in the response. In development, the response also includes exception class, message, file, line, and trace.
+The global exception and PHP error handlers emit a JSON response with `status: false`, `message`, and `correlation_id`. In production, unexpected exception messages and traces are never included in the response. In development, the response also includes exception class, message, file, line, and trace.
 
 Business rule errors are safe to expose in every environment:
 
