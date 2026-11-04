@@ -41,10 +41,34 @@ ErrorHandler::register([
     'environment' => 'production',
     RuntimeException::class => ['message' => 'System processing failed.'],
     PDOException::class => ['message' => 'Database operation failed.'],
+    'exception_messages' => [
+        Illuminate\Database\Eloquent\ModelNotFoundException::class => [
+            'message' => 'hasil Dari [Model Name] tidak di temukan',
+        ],
+    ],
 ]);
 ```
 
-Custom messages are exposed in production; unconfigured exceptions use `Internal Server Error`. You can also use the `exception_messages` key to keep message configuration separate from handler options.
+Custom messages are exposed in production. `{model}` is replaced with the short model class name for Laravel's `ModelNotFoundException` (for example, `App\Models\Balance` becomes `Balance`). `{model_name}`, `:model`, and `[Model Name]` are also supported. Unrecognized exceptions use `Internal Server Error`; recognized exception types use safe built-in defaults. See [Default Exception Messages.xlsx](./Default%20Exception%20Messages%20Reference.xlsx) for the full default-message reference.
+
+For Laravel 11+, Laravel renders request exceptions through its own exception pipeline, so register a renderer there to use the package's response for model-not-found errors:
+
+```php
+use BusinessErrorHandler\ErrorHandler;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Request;
+
+->withExceptions(function (Exceptions $exceptions): void {
+    ErrorHandler::register(config('error-handler'));
+
+    $exceptions->render(function (ModelNotFoundException $exception, Request $request) {
+        return response()->json(ErrorHandler::render($exception), 404);
+    });
+})
+```
+
+In Laravel 10 and earlier, add the equivalent `renderable` callback to `app/Exceptions/Handler.php`. This ensures Laravel's request exception handler uses the package-formatted message rather than its default exception response.
 
 ### Logging
 

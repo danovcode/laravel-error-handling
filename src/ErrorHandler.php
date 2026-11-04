@@ -126,7 +126,7 @@ final class ErrorHandler
     private static function publicMessage(Throwable $exception): string
     {
         if ($exception instanceof BusinessValidationException) {
-            return $exception->getMessage();
+            return self::interpolateMessage($exception->getMessage(), $exception);
         }
 
         $configured = self::$config['exception_messages'] ?? [];
@@ -137,16 +137,21 @@ final class ErrorHandler
         );
         foreach ($classes as $class) {
             if (isset($configured[$class]['message']) && is_string($configured[$class]['message'])) {
-                return $configured[$class]['message'];
+                return self::interpolateMessage($configured[$class]['message'], $exception);
             }
 
             if (isset(self::$config[$class]['message']) && is_string(self::$config[$class]['message'])) {
-                return self::$config[$class]['message'];
+                return self::interpolateMessage(self::$config[$class]['message'], $exception);
             }
         }
 
         if (isset($configured['*']['message']) && is_string($configured['*']['message'])) {
-            return $configured['*']['message'];
+            return self::interpolateMessage($configured['*']['message'], $exception);
+        }
+
+        $defaultMessage = self::defaultExceptionMessage($exception);
+        if ($defaultMessage !== null) {
+            return self::interpolateMessage($defaultMessage, $exception);
         }
 
         if ((self::$config['environment'] ?? 'development') === 'development') {
@@ -154,6 +159,80 @@ final class ErrorHandler
         }
 
         return self::$config['default_message'] ?? 'Internal Server Error';
+    }
+
+    private static function defaultExceptionMessage(Throwable $exception): ?string
+    {
+        $defaults = [
+            'ModelNotFoundException' => 'No Result for Query [{model}].',
+            'NotFoundHttpException' => 'The requested resource was not found.',
+            'NotFoundException' => 'The requested resource was not found.',
+            'MethodNotAllowedHttpException' => 'The HTTP method is not allowed for this resource.',
+            'MethodNotAllowedException' => 'The HTTP method is not allowed for this resource.',
+            'TooManyRequestsHttpException' => 'Too many requests. Please try again later.',
+            'TooManyRequestsException' => 'Too many requests. Please try again later.',
+            'BadRequestHttpException' => 'The request is invalid.',
+            'BadRequestException' => 'The request is invalid.',
+            'UnauthorizedHttpException' => 'Authentication is required.',
+            'UnauthorizedException' => 'Authentication is required.',
+            'AuthenticationException' => 'Authentication is required.',
+            'ForbiddenHttpException' => 'You are not authorized to perform this action.',
+            'ForbiddenException' => 'You are not authorized to perform this action.',
+            'AuthorizationException' => 'You are not authorized to perform this action.',
+            'ValidationException' => 'The submitted data is invalid.',
+            'PDOException' => 'A database operation failed.',
+            'InvalidArgumentException' => 'The provided input is invalid.',
+            'OutOfBoundsException' => 'The requested item was not found.',
+            'OutOfRangeException' => 'The requested value is out of range.',
+            'LengthException' => 'The provided value has an invalid length.',
+            'DomainException' => 'The provided value is not valid for this operation.',
+            'TypeError' => 'The operation received a value of an invalid type.',
+            'ParseError' => 'The request could not be processed.',
+            'DivisionByZeroError' => 'The operation could not be completed.',
+            'ArithmeticError' => 'The operation could not be completed.',
+            'RuntimeException' => 'The operation could not be completed.',
+            'UnexpectedValueException' => 'The operation returned an unexpected result.',
+            'LogicException' => 'The operation could not be completed.',
+            'ErrorException' => 'The operation could not be completed.',
+            'Error' => 'The operation could not be completed.',
+            'Exception' => 'The operation could not be completed.',
+        ];
+
+        foreach (array_merge(
+            [(new \ReflectionClass($exception))->getShortName()],
+            array_map(
+                static fn (string $class): string => (new \ReflectionClass($class))->getShortName(),
+                array_values(class_parents($exception) ?: []),
+            ),
+        ) as $shortName) {
+            if (isset($defaults[$shortName])) {
+                return $defaults[$shortName];
+            }
+        }
+
+        return null;
+    }
+
+    private static function interpolateMessage(string $message, Throwable $exception): string
+    {
+        if (!method_exists($exception, 'getModel')) {
+            return $message;
+        }
+
+        $model = $exception->getModel();
+        if (!is_string($model) || $model === '') {
+            return $message;
+        }
+
+        $separator = strrpos($model, '\\');
+        $modelName = $separator === false ? $model : substr($model, $separator + 1);
+
+        return strtr($message, [
+            '{model}' => $modelName,
+            '{model_name}' => $modelName,
+            ':model' => $modelName,
+            '[Model Name]' => $modelName,
+        ]);
     }
 
     private static function httpStatus(Throwable $exception): int

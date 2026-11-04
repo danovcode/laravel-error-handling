@@ -27,7 +27,7 @@ final class ErrorHandlerTest extends TestCase
 
         self::assertSame(false, $response['status']);
         self::assertArrayNotHasKey('success', $response);
-        self::assertSame('Internal Server Error', $response['message']);
+        self::assertSame('The operation could not be completed.', $response['message']);
         self::assertSame('test-correlation', $response['correlation_id']);
         self::assertArrayNotHasKey('exception', $response);
     }
@@ -43,6 +43,34 @@ final class ErrorHandlerTest extends TestCase
             'System processing failed.',
             ErrorHandler::render(new RuntimeException('private detail'))['message'],
         );
+    }
+
+    public function testModelNotFoundUsesSafeDefaultWithShortModelName(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+
+        $response = ErrorHandler::render(
+            new ModelNotFoundException('No query results for model [App\\Models\\Balance].', 'App\\Models\\Balance'),
+        );
+
+        self::assertSame('No Result for Query [Balance].', $response['message']);
+        self::assertStringNotContainsString('No query results', $response['message']);
+    }
+
+    public function testModelNotFoundMessageCanBeCustomizedWithModelPlaceholder(): void
+    {
+        ErrorHandler::register([
+            'environment' => 'production',
+            'exception_messages' => [
+                ModelNotFoundException::class => ['message' => 'hasil Dari [Model Name] tidak di temukan'],
+            ],
+        ]);
+
+        $response = ErrorHandler::render(
+            new ModelNotFoundException('No query results for model [App\\Models\\Balance].', 'App\\Models\\Balance'),
+        );
+
+        self::assertSame('hasil Dari Balance tidak di temukan', $response['message']);
     }
 
     public function testBusinessValidationMessageIsSafeToExposeInProduction(): void
@@ -62,8 +90,9 @@ final class ErrorHandlerTest extends TestCase
 
         $response = ErrorHandler::render($exception);
 
-        self::assertSame('diagnostic detail', $response['message']);
+        self::assertSame('The operation could not be completed.', $response['message']);
         self::assertSame($exception::class, $response['exception']['class']);
+        self::assertSame('diagnostic detail', $response['exception']['message']);
         self::assertArrayHasKey('trace', $response['exception']);
     }
 
@@ -104,5 +133,18 @@ final class ErrorHandlerTest extends TestCase
         self::assertSame(422, $logger->payload['http_status']);
         self::assertSame(120, $logger->payload['request_time']);
         self::assertSame('request-123', $logger->payload['correlation_id']);
+    }
+}
+
+final class ModelNotFoundException extends RuntimeException
+{
+    public function __construct(string $message, private readonly string $model)
+    {
+        parent::__construct($message);
+    }
+
+    public function getModel(): string
+    {
+        return $this->model;
     }
 }
