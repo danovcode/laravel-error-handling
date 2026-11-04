@@ -179,7 +179,6 @@ final class ErrorHandler
             'ForbiddenHttpException' => 'You are not authorized to perform this action.',
             'ForbiddenException' => 'You are not authorized to perform this action.',
             'AuthorizationException' => 'You are not authorized to perform this action.',
-            'ValidationException' => 'The submitted data is invalid.',
             'PDOException' => 'A database operation failed.',
             'InvalidArgumentException' => 'The provided input is invalid.',
             'OutOfBoundsException' => 'The requested item was not found.',
