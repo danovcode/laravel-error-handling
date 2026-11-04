@@ -63,6 +63,12 @@ final class ErrorHandler
             'correlation_id' => $correlationId,
         ];
 
+        $validationErrors = self::validationErrors($exception);
+        $validationCount = array_sum(array_map('count', $validationErrors));
+        if ($validationCount > 1) {
+            $response['validation'] = $validationErrors;
+        }
+
         if ((self::$config['environment'] ?? 'development') === 'development') {
             $response['exception'] = [
                 'class' => $exception::class,
@@ -149,6 +155,12 @@ final class ErrorHandler
             return self::interpolateMessage($configured['*']['message'], $exception);
         }
 
+        foreach (self::validationErrors($exception) as $messages) {
+            if (isset($messages[0])) {
+                return $messages[0];
+            }
+        }
+
         $defaultMessage = self::defaultExceptionMessage($exception);
         if ($defaultMessage !== null) {
             return self::interpolateMessage($defaultMessage, $exception);
@@ -159,6 +171,33 @@ final class ErrorHandler
         }
 
         return self::$config['default_message'] ?? 'Internal Server Error';
+    }
+
+    private static function validationErrors(Throwable $exception): array
+    {
+        if (strtolower((new \ReflectionClass($exception))->getShortName()) !== 'validationexception'
+            || !method_exists($exception, 'errors')) {
+            return [];
+        }
+
+        $errors = $exception->errors();
+        if (!is_array($errors)) {
+            return [];
+        }
+
+        $validation = [];
+        foreach ($errors as $field => $messages) {
+            if (!is_array($messages)) {
+                $messages = [$messages];
+            }
+
+            $messages = array_values(array_filter($messages, 'is_string'));
+            if ($messages !== []) {
+                $validation[(string) $field] = $messages;
+            }
+        }
+
+        return $validation;
     }
 
     private static function defaultExceptionMessage(Throwable $exception): ?string

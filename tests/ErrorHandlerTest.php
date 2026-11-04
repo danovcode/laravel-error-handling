@@ -73,6 +73,34 @@ final class ErrorHandlerTest extends TestCase
         self::assertSame('hasil Dari Balance tidak di temukan', $response['message']);
     }
 
+    public function testValidationExceptionShowsSingleValidationMessage(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+
+        $response = ErrorHandler::render(new ValidationException([
+            'nik' => ['NIK wajib diisi.'],
+        ]));
+
+        self::assertSame('NIK wajib diisi.', $response['message']);
+        self::assertArrayNotHasKey('validation', $response);
+    }
+
+    public function testValidationExceptionReturnsMultipleErrorsUnderValidationKey(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+
+        $response = ErrorHandler::render(new ValidationException([
+            'nik' => ['NIK wajib diisi.', 'NIK harus berupa string.'],
+            'reservation_id' => ['Reservation_id wajib diisi.'],
+        ]));
+
+        self::assertSame('NIK wajib diisi.', $response['message']);
+        self::assertSame([
+            'nik' => ['NIK wajib diisi.', 'NIK harus berupa string.'],
+            'reservation_id' => ['Reservation_id wajib diisi.'],
+        ], $response['validation']);
+    }
+
     public function testBusinessValidationMessageIsSafeToExposeInProduction(): void
     {
         ErrorHandler::register(['environment' => 'production']);
@@ -146,5 +174,18 @@ final class ModelNotFoundException extends RuntimeException
     public function getModel(): string
     {
         return $this->model;
+    }
+}
+
+final class ValidationException extends RuntimeException
+{
+    public function __construct(private readonly array $validationErrors)
+    {
+        parent::__construct('The given data was invalid.');
+    }
+
+    public function errors(): array
+    {
+        return $this->validationErrors;
     }
 }
