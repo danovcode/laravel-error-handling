@@ -63,6 +63,10 @@ final class ErrorHandler
             'correlation_id' => $correlationId,
         ];
 
+        if ($exception instanceof BusinessValidationException && $exception->getData() !== null) {
+            $response['data'] = $exception->getData();
+        }
+
         $validationErrors = self::validationErrors($exception);
         $validationCount = array_sum(array_map('count', $validationErrors));
         if ($validationCount > 1) {

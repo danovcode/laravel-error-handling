@@ -105,10 +105,27 @@ final class ErrorHandlerTest extends TestCase
     {
         ErrorHandler::register(['environment' => 'production']);
 
+        $response = ErrorHandler::render(new BusinessValidationException('Insufficient balance.'));
+
         self::assertSame(
             'Insufficient balance.',
-            ErrorHandler::render(new BusinessValidationException('Insufficient balance.'))['message'],
+            $response['message'],
         );
+        self::assertArrayNotHasKey('data', $response);
+    }
+
+    public function testBusinessValidationExceptionCanIncludeResponseData(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+        $data = ['available_balance' => 50, 'required_amount' => 75];
+
+        $response = ErrorHandler::render(new BusinessValidationException(
+            'Insufficient balance.',
+            data: $data,
+        ));
+
+        self::assertSame('Insufficient balance.', $response['message']);
+        self::assertSame($data, $response['data']);
     }
 
     public function testDevelopmentIncludesExceptionDetails(): void

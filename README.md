@@ -32,6 +32,34 @@ use BusinessErrorHandler\BusinessValidationException;
 throw new BusinessValidationException('Insufficient balance.');
 ```
 
+You can optionally attach safe response data to a business validation exception. It is included as `data` in the error response:
+
+```php
+throw new BusinessValidationException(
+    'Insufficient balance.',
+    data: [
+        'available_balance' => 50,
+        'required_amount' => 75,
+    ],
+);
+```
+
+The response contains `status: false`, `message`, and the provided `data`. If no data is provided, the `data` key is omitted.
+
+Laravel `ValidationException` responses expose the first validation message as `message`. When there are multiple validation messages, the response also includes the full field-keyed `validation` array:
+
+```json
+{
+    "status": false,
+    "message": "username is required",
+    "validation": {
+        "nik": ["username is required.", "username has to be string"],
+        "reservation_id": ["transaction id is required."]
+    },
+    "correlation_id": "..."
+}
+```
+
 ### Safe custom messages
 
 Configure exception-specific messages by class name:
