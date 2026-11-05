@@ -128,6 +128,38 @@ final class ErrorHandlerTest extends TestCase
         self::assertSame($data, $response['data']);
     }
 
+    public function testBusinessValidationExceptionAcceptsScalarAndObjectData(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+        $objectData = (object) ['available_balance' => 50];
+
+        $scalarResponse = ErrorHandler::render(new BusinessValidationException(
+            'Insufficient balance.',
+            data: 'balance_too_low',
+        ));
+        $objectResponse = ErrorHandler::render(new BusinessValidationException(
+            'Insufficient balance.',
+            data: $objectData,
+        ));
+
+        self::assertSame('balance_too_low', $scalarResponse['data']);
+        self::assertSame($objectData, $objectResponse['data']);
+        self::assertJson(json_encode($objectResponse));
+    }
+
+    public function testExplicitNullBusinessValidationDataIsIncluded(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+
+        $response = ErrorHandler::render(new BusinessValidationException(
+            'No additional data.',
+            data: null,
+        ));
+
+        self::assertArrayHasKey('data', $response);
+        self::assertNull($response['data']);
+    }
+
     public function testDevelopmentIncludesExceptionDetails(): void
     {
         ErrorHandler::register(['environment' => 'development']);

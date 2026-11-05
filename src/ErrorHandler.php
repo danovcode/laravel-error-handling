@@ -63,7 +63,7 @@ final class ErrorHandler
             'correlation_id' => $correlationId,
         ];
 
-        if ($exception instanceof BusinessValidationException && $exception->getData() !== null) {
+        if ($exception instanceof BusinessValidationException && $exception->hasData()) {
             $response['data'] = $exception->getData();
         }
 

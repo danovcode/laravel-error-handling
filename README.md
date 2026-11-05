@@ -32,7 +32,7 @@ use BusinessErrorHandler\BusinessValidationException;
 throw new BusinessValidationException('Insufficient balance.');
 ```
 
-You can optionally attach safe response data to a business validation exception. It is included as `data` in the error response:
+You can optionally attach response data of any JSON-encodable PHP type (array, object, string, number, boolean, or `null`) to a business validation exception. It is included as `data` in the error response:
 
 ```php
 throw new BusinessValidationException(
@@ -44,7 +44,7 @@ throw new BusinessValidationException(
 );
 ```
 
-The response contains `status: false`, `message`, and the provided `data`. If no data is provided, the `data` key is omitted.
+The response contains `status: false`, `message`, and the provided `data`. If no data argument is provided, the `data` key is omitted. Explicitly passing `data: null` includes `"data": null`. Values that PHP cannot encode as JSON (such as resources and closures) cannot be returned in a JSON response.
 
 Laravel `ValidationException` responses expose the first validation message as `message`. When there are multiple validation messages, the response also includes the full field-keyed `validation` array:
 
