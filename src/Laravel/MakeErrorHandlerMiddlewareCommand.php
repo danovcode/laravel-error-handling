@@ -46,18 +46,28 @@ class LogRequestResponse
         $startedAt = microtime(true);
         $response = $next($request);
         $body = $response->getContent();
+        $responseJson = null;
 
         if (is_string($body)) {
             $decodedBody = json_decode($body, true);
-            $responseJson = json_last_error() === JSON_ERROR_NONE
-                ? $decodedBody
-                : ['body' => $body];
-        } else {
-            $responseJson = null;
-        }
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $responseJson = $decodedBody;
 
-        if (is_array($responseJson)) {
-            unset($responseJson['exception']);
+                if (
+                    config('app.env') !== 'production'
+                    && !config('app.debug')
+                    && is_array($responseJson)
+                    && array_key_exists('exception', $responseJson)
+                ) {
+                    unset($responseJson['exception']);
+                    $response->setContent(json_encode(
+                        $responseJson,
+                        JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE,
+                    ));
+                }
+            } else {
+                $responseJson = ['body' => $body];
+            }
         }
 
         $payload = [

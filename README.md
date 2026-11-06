@@ -141,10 +141,13 @@ response are logged by the error handler instead.
 
 Set `kibana_logging` to `true` to send request logs to Kibana (configure
 `kibana_url`, `kibana_timeout`, and `kibana_headers` as needed). When it is
-`false`, they are written to Laravel's default log channel. The middleware
-leaves the HTTP response unchanged and omits the response's top-level
-`exception` field from the log. Since request and response bodies can contain
-credentials or personal data, redact sensitive fields before logging them.
+`false`, they are written to Laravel's default log channel. When `APP_ENV` is
+not `production` and `APP_DEBUG=false`, the middleware removes a top-level
+`exception` field from the JSON response before returning it. Otherwise, the
+response (including any exception details) is left unchanged. Be careful:
+enabling `APP_DEBUG` can expose exception messages and traces to clients.
+Request and response bodies can also contain credentials or personal data, so
+redact sensitive fields before logging them.
 
 ### Laravel Artisan generator
 
