@@ -16,7 +16,10 @@ final class ErrorHandlerServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->commands([MakeErrorHandlerCommand::class]);
+            $this->commands([
+                MakeErrorHandlerCommand::class,
+                MakeErrorHandlerMiddlewareCommand::class,
+            ]);
         }
     }
 }

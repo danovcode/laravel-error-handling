@@ -130,91 +130,21 @@ The incoming `X-Correlation-ID` is reused when it contains only letters, numbers
 
 #### Log every Laravel request and response
 
-The built-in error logger sends a log when an exception is handled. If you also
-want a log for every completed Laravel request, generate middleware:
-
 ```bash
-php artisan make:middleware LogRequestResponse
+php artisan make:errorhandler-middleware
 ```
 
-In the generated `app/Http/Middleware/LogRequestResponse.php`, use the package's
-logger and configuration:
+This creates `app/Http/Middleware/LogRequestResponse.php`. Register
+`LogRequestResponse` globally or on the routes you want to log. It logs
+completed responses; exceptions handled before the middleware receives a
+response are logged by the error handler instead.
 
-```php
-<?php
-
-namespace App\Http\Middleware;
-
-use BusinessErrorHandler\Logger\KibanaLogger;
-use Closure;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpFoundation\Response;
-use Throwable;
-
-class LogRequestResponse
-{
-    public function handle(Request $request, Closure $next): Response
-    {
-        $startedAt = microtime(true);
-        $response = $next($request);
-        $body = $response->getContent();
-
-        if (is_string($body)) {
-            $decodedBody = json_decode($body, true);
-            $responseJson = json_last_error() === JSON_ERROR_NONE
-                ? $decodedBody
-                : ['body' => $body];
-        } else {
-            $responseJson = null;
-        }
-
-        // Keep development exception details out of this request log.
-        if (is_array($responseJson)) {
-            unset($responseJson['exception']);
-        }
-
-        $payload = [
-            'url' => $request->fullUrl(),
-            'method' => $request->method(),
-            'request_json' => $request->all(),
-            'response_json' => $responseJson,
-            'http_status' => $response->getStatusCode(),
-            'request_time' => (int) round((microtime(true) - $startedAt) * 1000),
-            'correlation_id' => $response->headers->get('X-Correlation-ID'),
-        ];
-
-        try {
-            if (config('error-handler.kibana_logging')) {
-                (new KibanaLogger(
-                    (string) config('error-handler.kibana_url'),
-                    (int) config('error-handler.kibana_timeout', 2),
-                    (array) config('error-handler.kibana_headers', []),
-                ))->log($payload);
-            } else {
-                Log::info('HTTP request and response', $payload);
-            }
-        } catch (Throwable $exception) {
-            Log::warning('Request/response logging failed', [
-                'url' => $request->fullUrl(),
-                'method' => $request->method(),
-                'error' => $exception->getMessage(),
-            ]);
-        }
-
-        return $response;
-    }
-}
-```
-
-Set `kibana_logging` to `true` to send these request logs to Kibana (configure
+Set `kibana_logging` to `true` to send request logs to Kibana (configure
 `kibana_url`, `kibana_timeout`, and `kibana_headers` as needed). When it is
-`false`, the middleware writes them to Laravel's default log channel. Register
-the middleware globally or on the routes you want to log. It logs completed
-responses; exceptions handled before the middleware receives a response are
-logged by the error handler instead. The middleware leaves the HTTP response
-unchanged. Since request and response bodies can contain credentials or personal
-data, redact sensitive fields before logging them.
+`false`, they are written to Laravel's default log channel. The middleware
+leaves the HTTP response unchanged and omits the response's top-level
+`exception` field from the log. Since request and response bodies can contain
+credentials or personal data, redact sensitive fields before logging them.
 
 ### Laravel Artisan generator
 
