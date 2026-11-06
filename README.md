@@ -151,6 +151,7 @@ credentials or personal data, redact sensitive fields before logging them.
 ```bash
 php artisan make:errorhandler
 php artisan make:errorhandler --logkibana
+php artisan make:errorhandler-middleware
 ```
 
 The command creates `config/error-handler.php`. Register the handler from the application's exception/bootstrap setup with:
@@ -158,6 +159,9 @@ The command creates `config/error-handler.php`. Register the handler from the ap
 ```php
 ErrorHandler::register(config('error-handler'));
 ```
+
+`make:errorhandler-middleware` generates `app/Http/Middleware/LogRequestResponse.php`;
+register that middleware globally or on the routes you want to log.
 
 ## Testing
 
