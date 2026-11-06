@@ -9,15 +9,17 @@ use RuntimeException;
 
 final class MakeErrorHandlerMiddlewareCommand extends Command
 {
-    protected $signature = 'make:errorhandler-middleware';
+    protected $signature = 'make:errorhandler-middleware {--force : Overwrite the existing middleware file}';
 
     protected $description = 'Generate middleware that logs completed request and response data';
 
     public function handle(): int
     {
         $path = base_path('app/Http/Middleware/LogRequestResponse.php');
-        if (is_file($path)) {
+        $middlewareExists = is_file($path);
+        if ($middlewareExists && !$this->option('force')) {
             $this->error('The error handler middleware already exists: ' . $path);
+            $this->comment('Use --force to replace it.');
 
             return self::FAILURE;
         }
@@ -107,7 +109,11 @@ PHP;
             throw new RuntimeException('Unable to write the middleware file: ' . $path);
         }
 
-        $this->info('Error handler middleware created at ' . $path);
+        $this->info(sprintf(
+            'Error handler middleware %s at %s',
+            $middlewareExists ? 'updated' : 'created',
+            $path,
+        ));
         $this->comment('Register LogRequestResponse globally or on the routes you want to log.');
 
         return self::SUCCESS;

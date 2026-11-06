@@ -141,13 +141,14 @@ response are logged by the error handler instead.
 
 Set `kibana_logging` to `true` to send request logs to Kibana (configure
 `kibana_url`, `kibana_timeout`, and `kibana_headers` as needed). When it is
-`false`, they are written to Laravel's default log channel. When `APP_ENV` is
-not `production` and `APP_DEBUG=false`, the middleware removes a top-level
-`exception` field from the JSON response before returning it. Otherwise, the
-response (including any exception details) is left unchanged. Be careful:
-enabling `APP_DEBUG` can expose exception messages and traces to clients.
-Request and response bodies can also contain credentials or personal data, so
-redact sensitive fields before logging them.
+`false`, they are written to Laravel's default log channel. The middleware
+removes a top-level `exception` field from JSON responses when `APP_ENV` is
+`production` or `APP_DEBUG=false`. Exception details are preserved only when
+the app is non-production and debug mode is enabled. If you have already
+generated the middleware, regenerate it with `--force` to replace the existing
+file. Clear Laravel's cached configuration after changing `.env` with
+`php artisan config:clear`. Request and response bodies can also contain
+credentials or personal data, so redact sensitive fields before logging them.
 
 ### Laravel Artisan generator
 
@@ -155,6 +156,7 @@ redact sensitive fields before logging them.
 php artisan make:errorhandler
 php artisan make:errorhandler --logkibana
 php artisan make:errorhandler-middleware
+php artisan make:errorhandler-middleware --force
 ```
 
 The command creates `config/error-handler.php`. Register the handler from the application's exception/bootstrap setup with:
@@ -163,8 +165,10 @@ The command creates `config/error-handler.php`. Register the handler from the ap
 ErrorHandler::register(config('error-handler'));
 ```
 
-`make:errorhandler-middleware` generates `app/Http/Middleware/LogRequestResponse.php`;
-register that middleware globally or on the routes you want to log.
+`make:errorhandler-middleware` generates
+`app/Http/Middleware/LogRequestResponse.php` and refuses to replace an existing
+file unless `--force` is provided. Register the middleware globally or on the
+routes you want to log.
 
 ## Testing
 
