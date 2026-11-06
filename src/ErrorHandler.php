@@ -139,6 +139,11 @@ final class ErrorHandler
             return self::interpolateMessage($exception->getMessage(), $exception);
         }
 
+        $modelNotFound = self::wrappedModelNotFoundException($exception);
+        if ($modelNotFound !== null) {
+            return self::publicMessage($modelNotFound);
+        }
+
         $configured = self::$config['exception_messages'] ?? [];
         $classes = array_merge(
             [$exception::class],
@@ -249,6 +254,18 @@ final class ErrorHandler
         ) as $shortName) {
             if (isset($defaults[$shortName])) {
                 return $defaults[$shortName];
+            }
+        }
+
+        return null;
+    }
+
+    private static function wrappedModelNotFoundException(Throwable $exception): ?Throwable
+    {
+        for ($previous = $exception->getPrevious(); $previous !== null; $previous = $previous->getPrevious()) {
+            if ((new \ReflectionClass($previous))->getShortName() === 'ModelNotFoundException'
+                && method_exists($previous, 'getModel')) {
+                return $previous;
             }
         }
 

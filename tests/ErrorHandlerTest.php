@@ -57,6 +57,21 @@ final class ErrorHandlerTest extends TestCase
         self::assertStringNotContainsString('No query results', $response['message']);
     }
 
+    public function testWrappedModelNotFoundUsesSafeDefaultWithShortModelName(): void
+    {
+        ErrorHandler::register(['environment' => 'production']);
+        $modelNotFound = new ModelNotFoundException(
+            'No query results for model [App\\Models\\Balance] 1335',
+            'App\\Models\\Balance',
+        );
+        $exception = new NotFoundHttpException('Not Found', $modelNotFound);
+
+        $response = ErrorHandler::render($exception);
+
+        self::assertSame('No Result for Query [Balance].', $response['message']);
+        self::assertArrayNotHasKey('exception', $response);
+    }
+
     public function testModelNotFoundMessageCanBeCustomizedWithModelPlaceholder(): void
     {
         ErrorHandler::register([
@@ -71,6 +86,27 @@ final class ErrorHandlerTest extends TestCase
         );
 
         self::assertSame('hasil Dari Balance tidak di temukan', $response['message']);
+    }
+
+    public function testWrappedModelNotFoundUsesConfiguredModelMessage(): void
+    {
+        ErrorHandler::register([
+            'environment' => 'production',
+            'exception_messages' => [
+                ModelNotFoundException::class => ['message' => 'Model {model} tidak ditemukan.'],
+            ],
+        ]);
+        $exception = new NotFoundHttpException(
+            'Not Found',
+            new ModelNotFoundException(
+                'No query results for model [App\\Models\\Balance] 1335',
+                'App\\Models\\Balance',
+            ),
+        );
+
+        $response = ErrorHandler::render($exception);
+
+        self::assertSame('Model Balance tidak ditemukan.', $response['message']);
     }
 
     public function testValidationExceptionShowsSingleValidationMessage(): void
@@ -236,5 +272,18 @@ final class ValidationException extends RuntimeException
     public function errors(): array
     {
         return $this->validationErrors;
+    }
+}
+
+final class NotFoundHttpException extends RuntimeException
+{
+    public function __construct(string $message, ?\Throwable $previous = null)
+    {
+        parent::__construct($message, 0, $previous);
+    }
+
+    public function getStatusCode(): int
+    {
+        return 404;
     }
 }
